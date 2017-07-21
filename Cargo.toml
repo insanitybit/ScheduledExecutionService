@@ -1,0 +1,12 @@
+[package]
+name = "scheduled_executor"
+version = "0.1.0"
+authors = ["insanitybit <insanitybit@gmail.com>"]
+
+[dependencies]
+tokio-core = "*"
+futures = "0.1.*"
+tokio-timer = "*"
+futures-mpsc = "0.1"
+futures-cpupool = "0.1.5"
+uuid = { version = "0.5", features = ["v4"] }
