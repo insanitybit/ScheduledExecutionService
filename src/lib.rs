@@ -107,7 +107,7 @@ impl ScheduledExecutorService {
                         // Received a new message
                         Either::A((receive_future, timer_future)) => {
 
-                            let (msg, receiver) = receive_future;
+                            let msg = receive_future.0;
 
                             if let Some(msg) = msg {
                                 match msg {
@@ -121,18 +121,18 @@ impl ScheduledExecutorService {
                                 }
                             }
 
-                            Ok((receive_future, timer_future))
+                            Ok((receive_future.1.into_future(), timer_future))
                         },
                         // Timer has fired
                         Either::B(((timer_result, _, timer_futures), receive_future)) => {
                             let (id, _, time, f) = timer_result;
                             f();
-//
+
                             let time = time * 2;
                             let timeout = Timeout::new(Duration::from_secs(time), &handle).unwrap();
                             execute_after(&mut timers, id, timeout, time, f);
 
-                            Ok((receive_future, timer_result))
+                            Ok((receive_future, select_all(timer_futures)))
                         }
                     }
                 },
