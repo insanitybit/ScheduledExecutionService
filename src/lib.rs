@@ -19,13 +19,25 @@ use futures_mpsc::{UnboundedSender, UnboundedReceiver, unbounded};
 use std::thread;
 use std::time::Duration;
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 enum ExecutorMessage {
     ExecuteAfter { id: String, time: u64, f: Box<Fn() + Send + 'static> },
     Cancel { id: String }
 }
 
+pub struct ScheduledExecutorHandle {
+    exec_ref: ScheduledExecutor,
+    id: String
+}
+
+impl ScheduledExecutorHandle {
+    pub fn cancel(mut self) {
+        self.exec_ref.cancel(self.id);
+    }
+}
+
+#[derive(Clone)]
 pub struct ScheduledExecutor {
     sender: UnboundedSender<ExecutorMessage>,
 }
@@ -46,7 +58,8 @@ impl ScheduledExecutor {
         }
     }
 
-    pub fn execute_after(&mut self, time: u64, f: Box<Fn() + Send + 'static>) -> String {
+    pub fn execute_after(&mut self, time: u64, f: Box<Fn() + Send + 'static>)
+        -> ScheduledExecutorHandle {
         let id = uuid::Uuid::new_v4().to_string();
         self.sender.send(
             ExecutorMessage::ExecuteAfter {
@@ -56,10 +69,13 @@ impl ScheduledExecutor {
             }
         ).unwrap();
 
-        id
+        ScheduledExecutorHandle {
+            exec_ref: self.clone(),
+            id
+        }
     }
 
-    pub fn cancel(&mut self, id: String) {
+    fn cancel(&mut self, id: String) {
         self.sender.send(
             ExecutorMessage::Cancel {
                 id: id.clone(),
@@ -195,6 +211,7 @@ mod tests {
 
         thread::sleep(Duration::from_secs(5));
 
-        executor.cancel(foo);
+        foo.cancel();
+        bar.cancel();
     }
 }
